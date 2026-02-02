@@ -1,0 +1,11 @@
+# Core dependencies for API ingestion
+requests==2.32.3
+psycopg2-binary==2.9.10
+python-dotenv==1.0.1
+
+# dbt dependencies for local transformation testing
+dbt-core==1.9.1
+dbt-postgres==1.9.1
+
+# Optional: Data analysis
+pandas==2.2.3

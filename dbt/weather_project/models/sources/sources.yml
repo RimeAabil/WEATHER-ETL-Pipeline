@@ -1,0 +1,55 @@
+version: 2
+
+sources:
+  - name: raw
+    description: Raw weather data from ETL pipeline
+    database: weather_db
+    schema: dev
+    tables:
+      - name: raw_weather_data
+        description: |
+          Raw weather observations from various cities collected via ETL pipeline.
+          This is the primary source table for all weather analytics.
+        columns:
+          - name: id
+            description: Primary key - auto-incrementing unique identifier
+            tests:
+              - unique
+              - not_null
+          
+          - name: city
+            description: Name of the city where weather was observed
+            tests:
+              - not_null
+          
+          - name: temperature
+            description: Temperature measurement in Celsius
+            tests:
+              - not_null
+          
+          - name: weather_descriptions
+            description: Text description of weather conditions (e.g., "Clear sky", "Light rain")
+          
+          - name: wind_speed
+            description: Wind speed measurement in meters per second
+          
+          - name: time
+            description: Timestamp when the weather observation was recorded
+            tests:
+              - not_null
+          
+          - name: inserted_at
+            description: Timestamp when the record was inserted into the database (defaults to NOW())
+          
+          - name: utc_offset
+            description: UTC offset for the observation time (timezone information)
+        
+        # Freshness check: alert if data is older than expected
+        freshness:
+          warn_after: {count: 2, period: hour}
+          error_after: {count: 6, period: hour}
+        
+        # Tell dbt this table is loaded externally (by your ETL)
+        loaded_at_field: inserted_at
+  
+  

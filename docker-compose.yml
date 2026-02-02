@@ -1,0 +1,137 @@
+x-superset-user: &superset-user root
+
+services:
+  postgres:
+    container_name: postgres_container
+    image: postgres:15
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./postgres/airflow_init.sql:/docker-entrypoint-initdb.d/airflow_init.sql
+      - ./postgres/superset_init.sql:/docker-entrypoint-initdb.d/superset_init.sql
+    networks:
+      - my_network
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  airflow:
+    container_name: airflow_container
+    image: apache/airflow:2.10.4
+    environment:
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://${AIRFLOW_DB_USER}:${AIRFLOW_DB_PASSWORD}@postgres:5432/airflow_db
+      AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
+      _AIRFLOW_DB_MIGRATE: 'true'
+      _AIRFLOW_WWW_USER_CREATE: 'true'
+      _AIRFLOW_WWW_USER_USERNAME: ${AIRFLOW_ADMIN_USERNAME}
+      _AIRFLOW_WWW_USER_PASSWORD: ${AIRFLOW_ADMIN_PASSWORD}
+    env_file:
+      - .env
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "8080:8080"
+    networks:
+      - my_network
+    volumes:
+      - ./airflow/dags:/opt/airflow/dags
+      - ./data/api_request:/opt/airflow/api-request
+      - airflow_logs:/opt/airflow/logs
+      - /var/run/docker.sock:/var/run/docker.sock
+    restart: unless-stopped
+    command: >
+      bash -c "airflow db migrate &&
+               airflow users create --username ${AIRFLOW_ADMIN_USERNAME} --password ${AIRFLOW_ADMIN_PASSWORD} --firstname Admin --lastname User --role Admin --email admin@example.com 2>/dev/null || true &&
+               airflow scheduler & airflow webserver"
+
+  dbt:
+    container_name: dbt_container
+    image: ghcr.io/dbt-labs/dbt-postgres:1.9.latest
+    working_dir: /usr/app/dbt
+    volumes:
+      - ./dbt:/usr/app/dbt
+    environment:
+      DBT_PROFILES_DIR: /usr/app/dbt
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: ${POSTGRES_DB}
+      DB_USER: ${POSTGRES_USER}
+      DB_PASSWORD: ${POSTGRES_PASSWORD}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - my_network
+    entrypoint: [ "sh", "-c", "while true; do sleep 30; done" ]
+
+  redis:
+    image: redis:7
+    restart: unless-stopped
+    networks:
+      - my_network
+
+  superset-init:
+    image: apache/superset:3.0.0-py310
+    container_name: superset_init
+    command: [ "/app/docker/docker-init.sh" ]
+    env_file:
+      - path: docker/.env
+        required: true
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    user: *superset-user
+    volumes:
+      - ./docker:/app/docker
+      - superset_data:/app/data
+      - ./docker/superset_config.py:/app/pythonpath/superset_config.py
+    environment:
+      SUPERSET_LOAD_EXAMPLES: "${SUPERSET_LOAD_EXAMPLES:-no}"
+      SUPERSET_LOG_LEVEL: "${SUPERSET_LOG_LEVEL:-info}"
+    networks:
+      - my_network
+
+  superset:
+    image: apache/superset:3.0.0-py310
+    container_name: superset_container
+    command: [ "/app/docker/docker-bootstrap.sh", "app" ]
+    env_file:
+      - path: docker/.env
+        required: true
+    restart: unless-stopped
+    ports:
+      - "8088:8088"
+    user: *superset-user
+    depends_on:
+      superset-init:
+        condition: service_completed_successfully
+    volumes:
+      - ./docker:/app/docker
+      - superset_data:/app/data
+      - ./docker/superset_config.py:/app/pythonpath/superset_config.py
+    environment:
+      SUPERSET_LOG_LEVEL: "${SUPERSET_LOG_LEVEL:-info}"
+    networks:
+      - my_network
+
+volumes:
+  postgres_data:
+  airflow_logs:
+  superset_data:
+  redis:
+    external: false
+
+networks:
+  my_network:
+    driver: bridge

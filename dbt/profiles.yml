@@ -1,0 +1,46 @@
+weather_project:
+  target: analytics  # Changed to analytics - dbt writes to analytics schema by default
+  outputs:
+    # Development environment - uses dev schema with raw_weather_data
+    dev:
+      type: postgres
+      host: postgres
+      user: db_user
+      password: db_password
+      port: 5432
+      dbname: weather_db
+      schema: dev              # Changed from 'public' to 'dev'
+      threads: 4
+    
+    # Production/Public schema - uses public schema with weather_data
+    prod:
+      type: postgres
+      host: postgres
+      user: db_user
+      password: db_password
+      port: 5432
+      dbname: weather_db
+      schema: public           # Uses the public schema
+      threads: 4
+    
+    # Analytics schema - for transformed/aggregated data
+    analytics:
+      type: postgres
+      host: postgres
+      user: db_user
+      password: db_password
+      port: 5432
+      dbname: weather_db
+      schema: analytics        # Create a separate schema for dbt models
+      threads: 4
+    
+    # Airflow database - if you want to run dbt models on airflow metadata
+    airflow:
+      type: postgres
+      host: postgres
+      user: airflow
+      password: airflow
+      port: 5432
+      dbname: airflow_db
+      schema: public
+      threads: 2

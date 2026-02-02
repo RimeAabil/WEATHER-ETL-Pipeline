@@ -1,0 +1,32 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+ENV/
+.env
+
+# Docker
+.docker_id
+superset_data/
+postgres_data/
+airflow_logs/
+redis_data/
+
+# dbt
+dbt/weather_project/dbt_packages/
+dbt/weather_project/logs/
+dbt/weather_project/target/
+
+# IDE
+.vscode/
+.idea/
+
+# Logs
+*.log
+logs.txt
+superset_init.log
+
+# Mac
+.DS_Store

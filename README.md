@@ -8,20 +8,72 @@ The primary goal is to provide a reliable, automated system that tracks weather 
 ---
 
 ## 🏗️ Architecture & Component Logic
+The project's architecture is as follows:
 
-![Project Architecture and Data Pipeline](assets/weather-pipeline-architecture.png)
+**Tools overview**
+![Project Architecture and Data Pipeline](assets/weather-pipeline-architecture.jpg)
 
+**Data processing steps overview**
 ```mermaid
-graph TD
-    A[WeatherStack API] --> B(Python Ingestion Script);
-    B --> C{PostgreSQL Raw Schema};
-    C --> D[dbt Transformation];
-    D --> E{PostgreSQL Analytics Schema};
-    E --> F[Apache Superset];
-    subgraph Orchestration
-        G[Apache Airflow] --> B;
-        G --> D;
-    end
+graph TB
+    %% Data Source
+    API[("☁️ WeatherStack API<br/><small>External Data Source</small>")]
+    
+    %% Ingestion Layer
+    Python["🐍 Python Ingestion Script<br/><small>Data Collection & Loading</small>"]
+    
+    %% Storage Layers
+    Raw[("📦 PostgreSQL<br/>Raw Schema<br/><small>Staging Data</small>")]
+    Analytics[("📊 PostgreSQL<br/>Analytics Schema<br/><small>Transformed Data</small>")]
+    
+    %% Transformation
+    DBT["⚙️ dbt Transformation<br/><small>Data Modeling & Quality</small>"]
+    
+    %% Visualization
+    Superset["📈 Apache Superset<br/><small>Dashboards & Analytics</small>"]
+    
+    %% Orchestration
+    Airflow["🔄 Apache Airflow<br/><small>Workflow Orchestration</small>"]
+    
+    %% Process Explanations
+    Step1["📥 STEP 1: EXTRACT<br/>Fetch current weather data<br/>via HTTP requests"]
+    Step2["💾 STEP 2: LOAD<br/>Store raw JSON/data as-is<br/>with timestamps"]
+    Step3["🔄 STEP 3: TRANSFORM<br/>Clean, aggregate & model<br/>Apply business logic"]
+    Step4["📊 STEP 4: ANALYZE<br/>Create charts & dashboards<br/>Monitor weather trends"]
+    Step5["⏰ ORCHESTRATION<br/>Schedule daily runs<br/>Handle failures & alerts"]
+    
+    %% Data Flow
+    API -->|REST API Call| Python
+    Python -->|Bulk Insert| Raw
+    Raw -->|Source Tables| DBT
+    DBT -->|Marts & Models| Analytics
+    Analytics -->|SQL Queries| Superset
+    
+    %% Orchestration Flow
+    Airflow -.->|Schedule & Monitor| Python
+    Airflow -.->|Schedule & Monitor| DBT
+    
+    %% Explanations positioning
+    Step1 -.-> Python
+    Step2 -.-> Raw
+    Step3 -.-> DBT
+    Step4 -.-> Superset
+    Step5 -.-> Airflow
+    
+    %% Styling
+    classDef source fill:#e1f5ff,stroke:#0288d1,stroke-width:2px,color:#000
+    classDef process fill:#fff3e0,stroke:#f57c00,stroke-width:2px,color:#000
+    classDef storage fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px,color:#000
+    classDef viz fill:#e8f5e9,stroke:#388e3c,stroke-width:2px,color:#000
+    classDef orchestration fill:#fff9c4,stroke:#f9a825,stroke-width:3px,stroke-dasharray: 5 5,color:#000
+    classDef explanation fill:#fafafa,stroke:#757575,stroke-width:1px,color:#000,stroke-dasharray: 3 3
+    
+    class API source
+    class Python,DBT process
+    class Raw,Analytics storage
+    class Superset viz
+    class Airflow orchestration
+    class Step1,Step2,Step3,Step4,Step5 explanation
 ```
 
 ### 1. Ingestion Layer (Python + Airflow)

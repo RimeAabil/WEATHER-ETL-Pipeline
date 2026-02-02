@@ -123,7 +123,7 @@ graph TB
 ### 1. Initial Setup
 1. **Clone the Project**:
    ```bash
-   git clone <your-repo-url>
+   git clone https://github.com/RimeAabil/WEATHER-ETL-Pipeline
    cd WEATHER-ETL
    ```
 2. **Configure Environment**:
@@ -187,7 +187,7 @@ graph TB
 
 ---
 
-## � Security & Best Practices
+## Security & Best Practices
 - **Variables**: No hardcoded passwords or API keys. All secrets are managed via `.env` files.
 - **Networking**: All containers reside in a private Docker network (`my_network`), keeping the database hidden from the public internet.
 - **Git**: A `.gitignore` is provided to ensure your local virtual environments and secret keys are never committed to version control.
